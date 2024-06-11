@@ -5,23 +5,7 @@ from scipy.stats import bernoulli
 import matplotlib.pyplot as plt
 import random
 
-from Aux import autocorr_, psd, welch_psd, corr_cruzada
-
-
-def generar_proceso_bernoulli(N, p):
-    # Genera la secuencia de bits con probabilidad p de 1 y 1-p de 0
-    secuencia = np.random.choice([0, 1], size=N, p=[1-p, p])
-
-    for i in range(len(secuencia)):
-        if secuencia[i] == 0:
-            secuencia[i] = -1
-
-
-    return secuencia
-
-
-
-
+from Aux import autocorr_, psd, welch_psd, corr_cruzada, generar_proceso_bernoulli
 
 # Define la longitud del proceso Bernoulli y la probabilidad p
 N = 200
