@@ -1,9 +1,21 @@
 import numpy as np
 import math
 
+
 from matplotlib import pyplot as plt
 from scipy.signal import freqz
 
+
+def generar_proceso_bernoulli(N, p):
+    # Genera la secuencia de bits con probabilidad p de 1 y 1-p de 0
+    secuencia = np.random.choice([0, 1], size=N, p=[1-p, p])
+
+    for i in range(len(secuencia)):
+        if secuencia[i] == 0:
+            secuencia[i] = -1
+
+
+    return secuencia
 
 def autocorr_(x):
     return corr_cruzada(x,x)
@@ -49,52 +61,30 @@ def welch_psd(x, largo_ventana, paso):
 
 
 
-def entrenar_filtro_LMS(d):
 
+def LMS(y, d, x,estimacion_inicial):
+    N = len(y)
+    y = np.array(y)
+    x = np.array(x)
+    w = estimacion_inicial
 
-    N=len(y)
+    w_estimado = np.zeros((d, N-d))
+    x_estimado = np.zeros(N)
+    error = np.zeros(N)
+    u = 0.9
 
-    w= np.zeros(k)
-    x_estimado=np.zeros(N)
-    error=np.zeros(N)
-    u=0.5
+    for i in range(d, N):
+        x_estimado[i] = np.dot(w, y[i-d:i])
+        error[i] = x[i] - x_estimado[i]
+        w = w + u * y[i-d:i] * error[i]
+        w_estimado[:, i-d] = w  # Corrige el índice para llenar w_estimado correctamente
 
-    for i in range(k):
-        #w[i]=x[k]#Tomo las primeras k muestras de la salida del canal como mi filtro
-        x_estimado[i]=np.dot(w,y[i:i+k])
-
-    for i in range(N-k):
-        x_estimado[i]=np.dot(w,y[i:i+k])
-        error[i]=x[i]-x_estimado[i]
-        w[i+1]=w[i]+u*y[i]*error[i]
-    return
-
-
-def LMS(y,d,x):
-
-    N=len(y)
-    w= np.zeros(d)
-
-    w_estimado= np.zeros(d)
-    x_estimado=np.zeros(N)
-    error=np.zeros(N)
-    u=0.005
-
-    #El filtro inicial son las primera D-1 muestras de la salida del canal
-    #for i in range(d):
-       # w[i]=x[d]#Tomo las primeras k muestras de la salida del canal como mi filtro
-
-
-    for i in range(d,N):
-            x_estimado[i]=np.dot(w,y[i:i+d])
-            error[i]=x[i]-x_estimado[i]
-            w_estimado[i+1]=w_estimado[i]+ u*y[i:i+d]*error[i]
-    return
+    return w,x_estimado
 
 
 
-
-impulse_response=[0.5,1,0.2,0.1,0.05,0.01]
+impulse_response=[1,0.4,0.3,0.1,-0.2,0.05]
+#impulse_response=[0.5,1,0.2,0.1,0.05,0.01]
 w, h = freqz(impulse_response)
 
 
@@ -116,5 +106,58 @@ plt.grid()
 
 plt.show()
 
+N = 1000
+p = 0.5  # Probabilidad de obtener un 1
 
+h=[1,0.5]
+
+x=generar_proceso_bernoulli(N,p)
+impulse_response=h
+#Calculo la respuesta del canal de comuniaciones (en esta caso el h que invente)
+y=np.convolve(x,impulse_response)
+d=len(impulse_response)
+print(y)
+estimaciones= np.zeros((d,len(x)-d))
+
+M=500
+
+#Cantidad de iteracion del LMS
+
+estimacion_inicial=np.zeros(len(h))
+coeficientes=np.zeros((len(h),M))
+coeficientes[:,0]=np.zeros((len(h)))
+
+
+for i in range(M-1):
+    x=generar_proceso_bernoulli(N,p)
+    y=np.convolve(x,impulse_response)
+    coeficientes[:,i+1], estimacion_salida=LMS(x,d,y,coeficientes[:,i])
+
+
+
+
+
+
+
+
+
+# Fase de la respuesta en frecuencia
+# Crear un gráfico
+plt.figure(figsize=(10, 6))
+plt.plot(coeficientes[0,:], marker='o', linestyle='-', color='b')
+plt.title('Coeficientes ')
+plt.xlabel('Posición')
+plt.ylabel('Valor')
+plt.grid(True)
+plt.show()
+
+plt.figure(figsize=(10, 6))
+plt.plot(estimaciones[1,:], marker='o', linestyle='-', color='b')
+plt.title('Valores del Vector por Posición')
+plt.xlabel('Posición')
+plt.ylabel('Valor')
+plt.grid(True)
+plt.show()
+
+#funcion_costo=(1/iter)*sum(abs(x_estimacdo-x_real)^2)
 
